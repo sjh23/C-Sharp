@@ -1,0 +1,139 @@
+throw는 C# 뿐만 아니라 모든 예외 기반 언어에서 핵심 걔념이다
+
+throw란?
+ - C#에서 throw는 예외 처리(Exception)를 강제로 발생시키는 키워드
+ - 주로 비정상적인 상황이나 프로그램의 논리적 오유를 발견했을 때 사용
+ - 예외 객체(Exception)를 생성해서 런타임에 전달 -> 호출한 곳에서 처리하거나 프로그램이 중단됨
+
+왜 사용하는가 ?
+
+ 1. 입력값이 잘못 되었을 때
+  void SetAge(int age)
+  {
+      if (age < 0)
+          throw new ArgumentException("나이는 음수가 될 수 없습니다.");
+  }  
+ 2. 예상치 못한 상태가 발생했을 때
+  void Process(string data)
+  {
+      if (data == null)
+          throw new NullReferenceException("데이터가 null입니다.");
+  }
+ 3. 기능 구현이 안 된 경우 (임시 코드)
+  void FutureFeature()
+  {
+      throw new NotImplementedException("이 기능은 아직 구현되지 않았습니다.");
+  }
+
+잘못된 방식 : 콘솔 출력만 하고 넘어감
+  void FutureFeature()
+  {
+      throw new NotImplementedException("이 기능은 아직 구현되지 않았습니다.");
+  }
+
+올바른 방식 : throw로 명확하게 알림
+  if (x == 0)
+  {
+      throw new InvalidOperationException("0으로 나눌 수 없습니다.");
+  }
+이렇게 하면 호출한 쪽에서도 try-catch로 처리하거나, 프로그램이 바로 중단되므로 문제를 무시할 수 없음.
+
+사용 예 : try와 함
+  try
+  {  
+      SetAge(-1);  // 여기서 throw 발생
+  }
+  catch (ArgumentException ex)
+  {
+      Console.WriteLine($"예외 발생: {ex.Message}");
+  }
+
+
+사용 이점
+1. 명확한 오류 전달 : 문제가 발생한 지점을 정확하게 알 수 있음
+2. 예외 처리 포함 : 메시지, 스택 트레이스 등 문제 분석에 유용함
+3. 재사용 가능 : 호출자에게 잭임 전가 -> try-catch에서 제어 가능
+4. 테스트 편함 : 예외 상황 테스트가 쉬움 (예외 발생 여부 확인 가능)
+
+고급 예 : 사용자 정의 예
+  class InvalidScoreException : Exception
+  {
+      public InvalidScoreException(string msg) : base(msg) { }
+  }
+
+  void AddScore(int score)
+  {
+      if (score < 0 || score > 100)
+          throw new InvalidScoreException("점수는 0~100 사이여야 합니다.");
+  }
+
+요약
+키워드 : throw
+목적 : 예외 발생시키기
+언제 : 비정상 상황 감지 시
+형식 : throw new ExceptionType("메시지");
+처리 : 호출자 try-catch로 받음
+
+
+=============================================================================================
+
+throw와 throw ex에 차이
+
+핵심 차이
+표현            설명                          스택 트레이스 유지
+throw           현재 예외를 그대로 던짐        유지됨   
+throw ex        현재 예외 객체를 새로 던짐     초기화됨(원래 발생 위치 정보 사라짐
+                (원본처럼 보이지만 아님)
+
+예제로 비교
+try
+{
+    int x = 0;
+    int y = 10 / x;  // 예외 발생
+}
+catch (Exception ex)
+{
+    throw;        // 🔥 원래 예외 그대로 다시 던짐
+    // throw ex;  // ❌ 예외 정보를 잃은 채 다시 던짐
+}
+
+throw 사용 결과                                        
+System.DivideByZeroException: Attempted to divide by zero.
+   at Program.Main() in Program.cs:line 10
+-> 예외가 정확히 발생한 줄 위치까지 보여줌
+
+                                         
+System.DivideByZeroException: Attempted to divide by zero.
+    at Program.Main() in Program.cs:line 14
+-> 예외가 미치 throw ex; 라인에서 발생한 것 처럼 보임                                         
+   원래의 오류 위치 정보는 사라짐
+
+왜 이런 차이가 생기나?
+throw;는 현재 catch 블록에서 받은 예외를 그대로 던지는 것
+throw ex;는 예외 객체를 새로 던짐 → 이 시점부터 스택 트레이스가 리셋됨
+
+예외 객체 ex는 catch할 때 원래의 정보는 가지고 있지만, throw ex; 하는 순간 “다시 새로 시작”하는 느낌
+
+상황	                                                사용 예	                                이유
+예외만 다시 던짐 (로깅만 하고 호출자에게 넘길 때)	        throw;	                                원래 예외 발생 지점 유지
+예외를 수정하거나 다른 예외로 감쌀 때	                  throw new Exception("처리 실패", ex);	  정보 추가 후 감싸서 던지기
+무조건 피해야 하는 경우	                                throw ex;	                              원래 오류 위치 정보 손실됨 → 디버깅 어려움
+
+예외 감싸기 패턴
+  try
+  {
+      LoadData();
+  }
+  catch (IOException ex)
+  {
+      throw new ApplicationException("파일을 로드하는 데 실패했습니다.", ex);
+  }
+                                         
+→ 이건 ex를 내부에 보존한 채 새로운 의미를 가진 예외로 감싸는 안전한 방법임. 
+  InnerException으로 원래 예외 정보도 함께 유지됨.
+
+구문	                        의미	                      언제 사용
+throw;	                      예외 그대로 다시 던짐        	대부분의 경우, 원래 오류를 보존하고 싶을 때
+throw ex;	                    예외를 새로 던짐	            ❌ 사용 비추천, 스택 트레이스 사라짐
+throw new ... (ex)	          예외 포장	                  의미를 추가할 때 (예: 사용자 친화 메시지 제공)
+                                         
