@@ -1,0 +1,59 @@
+namespace x
+{
+    public class a
+    {
+        public a(char i)   // 생성자: char 형식만 받음
+        {
+        }
+
+        public static void Main()
+        {
+            a aa = new a(2222);   // 여기서 오류 발생
+        }
+    }
+}
+
+발생원인
+ - 첫 번쨰 인수로 (int) 를 줬는데, (char)으로 변환할 수 없어서 오류 
+
+해결 방법
+ - 명시적인 케스팅을 진행한다
+ - 생성자를 int 타입으로 오버로드한다.
+
+이 코드에서 배울 점
+ - 타입 정확성 : 메서드나 생성자에 넘기는 인자의 타입을 정확히 일차시켜야함
+ - 케스팅 주의 : 암시적 변환이 안되는 경우엔 며잇적 케스팅 필요
+ - 오버로딩 전략 : 다양한 타입에 대응하여면 생성자나 메서드 오버로드를 적극 활용
+
+정리
+ - CS1503은 잘못된 타입의 인자를 넘겼을 때 발생하는 대표적인 컴파일 오류
+ - char와 int는 비슷해 보이지만, C#에서는 구체적으로 다룸
+ - 실무에서는 이런 문제를 피하려고 메서드 오버로딩이나 명확안 케스팅을 사용함
+
+내가 문제를 격은 코드
+Info info = new Info(year, tbxTargetAmount.Text); -> (안됨) Info info = new Info(year, (int)(tbxTargetAmount.Text)); 
+
+왜 안 되는가?
+ - (int)(tbxTargetAmount.Text) // Error
+ - tbxTargetAmount.Text는 문자열 타입
+ - (int)는 [double -> int] 나 [float -> int] 처럼 숫자 타입 간 변환에만 사용
+ - 문자열을 숫자로 바꾸려면 형변황이 아니라 파싱(parse) 을 해야함
+
+방법 1
+Info info = new Info(year, int.Parse(tbxTargetAmount.Text)); 
+
+문자열이 "10000" 같은 숫자일 때는 잘 작동함.
+하지만 "백만원"이나 빈 문자열이면 예외(FormatException) 발생함.
+
+
+방법 2
+if (int.TryParse(tbxTargetAmount.Text, out int targetAmount))
+{
+    Info info = new Info(year, targetAmount);
+}
+else
+{
+    MessageBox.Show("올바른 숫자를 입력하세요.");
+}
+TryParse는 변환 실패해도 예외 발생하지 않음 → 실무에서 더 안전함.
+
